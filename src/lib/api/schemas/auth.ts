@@ -15,3 +15,11 @@ export const signupSchema = z.object({
 });
 
 export type SignupInput = z.infer<typeof signupSchema>;
+
+export const loginSchema = z.object({
+    email: z.email("Enter a valid email"),
+    // Intentionally not re-checking password complexity here - a login
+    // attempt should just fail the credential check, not leak policy details.
+    password: z.string().min(1, "Password is required"),
+});
+export type LoginInput = z.infer<typeof loginSchema>;
