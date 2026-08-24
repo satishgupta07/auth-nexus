@@ -11,3 +11,11 @@ export function signAccessToken(payload: AccessTokenPayload): string {
         expiresIn: (process.env.JWT_ACCESS_EXPIRES_IN ?? "15m") as jwt.SignOptions["expiresIn"],
     });
 }
+
+export function verifyAccessToken(token: string): AccessTokenPayload | null {
+    try {
+        return jwt.verify(token, ACCESS_SECRET) as AccessTokenPayload;
+    } catch {
+        return null;
+    }
+}
