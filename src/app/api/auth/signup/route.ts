@@ -4,6 +4,7 @@ import { connectDB } from "@/lib/db/connect";
 import { User } from "@/models/User";
 import { hashPassword } from "@/lib/auth/password";
 import { signupSchema } from "@/lib/api/schemas/auth";
+import { issueEmailToken } from "@/lib/auth/emailToken";
 
 export const POST = async (request: NextRequest) => {
     const parsed = signupSchema.safeParse(await request.json());
@@ -31,7 +32,15 @@ export const POST = async (request: NextRequest) => {
         isVerified: false,
     });
 
+    const verifyToken = issueEmailToken(
+        user,
+        "verify",
+        process.env.JWT_VERIFY_EMAIL_EXPIRES_IN ?? "1d"
+    );
     await user.save();
+
+    const verifyUrl = `${process.env.NEXT_PUBLIC_APP_URL}/verify-email?token=${verifyToken}`;
+    console.log(verifyUrl);
 
     return NextResponse.json({ success: true, data: { email } }, { status: 201 });
 };

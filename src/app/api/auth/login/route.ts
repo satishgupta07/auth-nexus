@@ -34,6 +34,13 @@ export const POST = async (request: NextRequest) => {
     const validPassword = await comparePassword(password, user.password);
     if (!validPassword) return invalidCredentials();
 
+    if (!user.isVerified) {
+        return NextResponse.json(
+            { success: false, error: { message: "Please verify your email before logging in" } },
+            { status: 403 }
+        );
+    }
+
     const token = signAccessToken({ userId: user._id.toString() });
     await setAccessTokenCookie(token);
 
