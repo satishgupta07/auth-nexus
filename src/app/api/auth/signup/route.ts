@@ -5,6 +5,8 @@ import { User } from "@/models/User";
 import { hashPassword } from "@/lib/auth/password";
 import { signupSchema } from "@/lib/api/schemas/auth";
 import { issueEmailToken } from "@/lib/auth/emailToken";
+import { sendMail } from "@/lib/mail/sendMail";
+import { verifyEmailTemplate } from "@/lib/mail/templates/verifyEmail";
 
 export const POST = async (request: NextRequest) => {
     const parsed = signupSchema.safeParse(await request.json());
@@ -40,7 +42,11 @@ export const POST = async (request: NextRequest) => {
     await user.save();
 
     const verifyUrl = `${process.env.NEXT_PUBLIC_APP_URL}/verify-email?token=${verifyToken}`;
-    console.log(verifyUrl);
+    await sendMail({
+        to: email,
+        subject: "Verify your email",
+        html: verifyEmailTemplate({ verifyUrl }),
+    });
 
     return NextResponse.json({ success: true, data: { email } }, { status: 201 });
 };
