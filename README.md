@@ -1,36 +1,100 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AuthNexus
 
-## Getting Started
+A production-quality authentication app built with Next.js (App Router), TypeScript, MongoDB/Mongoose, JWT, Nodemailer + Mailtrap, and Tailwind CSS.
 
-First, run the development server:
+Built in two phases:
+
+- **Phase 1 (done)** — email/password signup, email verification, login, logout, forgot/reset password, all backed by short-lived JWTs and an httpOnly session cookie.
+- **Phase 2 (planned)** — Google and GitHub sign-in via Auth.js, sharing the same `User` collection as Phase 1.
+
+## Tech stack
+
+| Concern | Choice |
+|---|---|
+| Framework | Next.js 16 (App Router, Turbopack) |
+| Language | TypeScript |
+| Database | MongoDB via Mongoose |
+| Auth | Custom JWT (access + one-time email tokens); Auth.js for OAuth in Phase 2 |
+| Password hashing | bcryptjs |
+| Email | Nodemailer via Mailtrap (dev sandbox) |
+| Validation | Zod |
+| Styling | Tailwind CSS v4 |
+| Client HTTP / notifications | Axios, react-hot-toast |
+
+## Getting started
+
+### 1. Install dependencies
+
+```bash
+npm install
+```
+
+### 2. Configure environment variables
+
+Copy `.env.example` to `.env.local` and fill in real values:
+
+```bash
+cp .env.example .env.local
+```
+
+| Variable | Purpose |
+|---|---|
+| `NEXT_PUBLIC_APP_URL` | Base URL used to build verify-email / reset-password links |
+| `MONGODB_URI` | MongoDB connection string (e.g. a free MongoDB Atlas cluster) |
+| `JWT_ACCESS_SECRET` / `JWT_ACCESS_EXPIRES_IN` | Signs the session cookie |
+| `JWT_EMAIL_TOKEN_SECRET` | Signs one-time verify-email / reset-password links (kept separate from the access secret on purpose) |
+| `JWT_VERIFY_EMAIL_EXPIRES_IN` / `JWT_RESET_PASSWORD_EXPIRES_IN` | TTLs for those one-time links |
+| `MAILTRAP_HOST` / `MAILTRAP_PORT` / `MAILTRAP_USER` / `MAILTRAP_PASS` | SMTP credentials from your Mailtrap sandbox inbox |
+| `MAIL_FROM` | From-address used on outgoing mail |
+
+Generate secrets with:
+
+```bash
+openssl rand -base64 32
+```
+
+### 3. Run the dev server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Visit [http://localhost:3000](http://localhost:3000) — you'll be redirected to `/login` or `/dashboard` depending on whether you have a valid session.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Command | Description |
+|---|---|
+| `npm run dev` | Start the dev server (Turbopack) |
+| `npm run build` | Production build (also type-checks and prerenders static routes) |
+| `npm run start` | Run the production build |
+| `npm run lint` | Run ESLint |
 
-## Learn More
+## Auth flows
 
-To learn more about Next.js, take a look at the following resources:
+- **Sign up** (`/signup`) → creates the account (unverified) and emails a verify link.
+- **Verify email** (`/verify-email?token=...`) → activates the account.
+- **Log in** (`/login`) → requires a verified account; sets an httpOnly session cookie.
+- **Forgot password** (`/forgot-password`) → always responds the same way whether or not the email exists, and only emails a reset link if it does.
+- **Reset password** (`/reset-password?token=...`) → sets a new password and clears any existing session.
+- **Dashboard** (`/dashboard`) → protected; gated by `src/proxy.ts` (optimistic check) and `src/app/(protected)/layout.tsx` (authoritative, DB-backed check).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Project structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+src/
+  app/
+    (auth)/          public auth pages: login, signup, verify-email, forgot-password, reset-password
+    (protected)/      dashboard, gated behind session checks
+    api/auth/         signup, login, logout, verify-email, forgot-password, reset-password, current-user
+  components/auth/    shared form primitives (AuthCard, TextInput, PasswordInput, SubmitButton)
+  lib/
+    auth/             password hashing, JWT signing/verifying, session/cookie helpers
+    db/               cached Mongoose connection
+    mail/             Nodemailer transport + HTML email templates
+    api/              shared response helpers and Zod schemas
+  models/User.ts       Mongoose user schema
+  proxy.ts              route protection (Next 16's renamed Middleware)
+```
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+See `CLAUDE.md` for the architectural notes and conventions behind these decisions.
